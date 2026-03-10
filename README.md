@@ -14,6 +14,9 @@ The pipeline follows a robust Near Real-Time (NRT) processing architecture:
 4. **Data Storage:** Processed data is pushed to `PostgreSQL` (Neon Cloud) using optimized JDBC batch inserts to prevent connection overhead, while raw data is dumped into `MinIO` (Data Lake).
 5. **Visualization:** `Grafana` queries the cloud database to render real-time heatmaps, traffic/weather correlation charts, and vehicle classification metrics.
 
+<img width="1024" height="598" alt="image" src="https://github.com/user-attachments/assets/50aad5e4-a652-41e4-8580-9791d1e105dd" />
+
+
 🛠️ Technology Stack
 Language: Python, SQL, Scala/Java (underlying Spark/Kafka)
 
