@@ -19,7 +19,6 @@ def process_batch(df, epoch_id):
     row_count = df.count()
     if row_count > 0:
         try:
-            # Ghi dữ liệu lên Neon
             df.write \
                 .format("jdbc") \
                 .option("url", NEON_JDBC_URL) \
@@ -27,10 +26,11 @@ def process_batch(df, epoch_id):
                 .option("dbtable", "realtime_traffic_weather") \
                 .option("user", NEON_USER) \
                 .option("password", NEON_PASSWORD) \
+                .option("batchsize", "500") \
                 .mode("append") \
                 .save()
             
-            logger.info(f"Batch {epoch_id}: Đã đẩy {row_count} dòng lên Cloud.")
+            logger.info(f"Batch {epoch_id}: Đã đẩy {row_count} dòng lên Neon Cloud.")
         except Exception as e:
             logger.error(f"Lỗi tại Batch {epoch_id}: {str(e)}")
 
@@ -41,10 +41,11 @@ def main():
 
     spark = SparkSession.builder \
         .appName("TrafficWeatherStreaming") \
+        .master("local[*]") \
+        .config("spark.driver.memory", "2g") \
         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.6.0") \
         .getOrCreate()
 
-    # Tắt các log thừa thãi của chính Spark
     spark.sparkContext.setLogLevel("ERROR") 
 
     # --- ĐỊNH NGHĨA SCHEMA ---
@@ -76,7 +77,7 @@ def main():
         StructField("bus_truck_count", DoubleType(), True)
     ])
 
-# --- ĐỌC STREAM TỪ KAFKA ---
+    # --- ĐỌC STREAM TỪ KAFKA ---
     def read_kafka_topic(topic):
         return spark.readStream.format("kafka") \
             .option("kafka.bootstrap.servers", "kafka:9092") \
@@ -138,6 +139,7 @@ def main():
         .foreachBatch(process_batch) \
         .outputMode("append") \
         .option("checkpointLocation", "/opt/airflow/data/checkpoints/neon_v3") \
+        .trigger(processingTime='10 seconds') \
         .start()
 
     query.awaitTermination()

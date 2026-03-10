@@ -109,8 +109,8 @@ services:
     image: minio/minio:latest
     container_name: traffic_minio
     ports:
-      - "9000:9000" # Port API cho code gọi
-      - "9001:9001" # Port UI để xem trên trình duyệt
+      - "9000:9000" 
+      - "9001:9001" 
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -158,7 +158,7 @@ services:
       - kafka
     volumes:
       - ./src:/app/src
-      - ./data:/opt/airflow/data  # Share chung ổ cứng để AI đọc được ảnh do Airflow tải về
+      - ./data:/opt/airflow/data
     command: python /app/src/ai_worker/main.py
 
 volumes:
