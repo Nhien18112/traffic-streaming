@@ -68,3 +68,5 @@ Grafana: http://localhost:3000
 
 📊 Dashboard Preview
 [Traffic Command Center Dashboard](https://hominhnhien1805.grafana.net/goto/fffkm44i7jxmob?orgId=stacks-1552630)
+
+Snap shot : https://hominhnhien1805.grafana.net/dashboard/snapshot/T0xUt3kfJY4j7zwPx965E0hNQBjkkKFx
