@@ -1,0 +1,36 @@
+.env
+
+# --- FRONTEND BUILD ---
+web-ui/node_modules/
+web-ui/dist/
+
+# --- RUNTIME LOGS/ARTIFACTS ---
+*.log
+logs.txt
+
+# --- DỮ LIỆU (Data Lake) ---
+data/
+logs/
+*.jpg
+*.jpeg
+*.png
+*.json
+*.csv
+
+# --- DOCKER & KAFKA ---
+postgres_data/
+kafka_data/
+
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# --- IDE & HỆ ĐIỀU HÀNH ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

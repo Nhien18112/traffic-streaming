@@ -20,6 +20,22 @@ MINIO_PASS = "minioadmin"
 weather_api_key = os.getenv("WEATHER_API_KEY")
 tomtom_api_key = os.getenv("TOMTOM_API_KEY")
 
+def get_tomtom_keys():
+    raw_keys = os.getenv("TOMTOM_API_KEYS", "")
+    keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+    if keys:
+        return keys
+    if tomtom_api_key:
+        return [tomtom_api_key]
+    return []
+
+def mask_key(value):
+    if not value:
+        return "***"
+    if len(value) <= 6:
+        return "***"
+    return f"{value[:3]}...{value[-3:]}"
+
 try:
     producer = KafkaProducer(
         bootstrap_servers=[KAFKA_BROKER],
@@ -149,13 +165,18 @@ async def poll_weather():
                     logging.warning(f"Lỗi API Thời tiết {loc_name}: {e}")
                     
         producer.flush()
-        await asyncio.sleep(300) 
+        await asyncio.sleep(60) 
 
 async def poll_tomtom():
+    key_index = 0
     while True:
-        if not tomtom_api_key or not producer:
+        tomtom_keys = get_tomtom_keys()
+        if not tomtom_keys or not producer:
             await asyncio.sleep(60)
             continue
+
+        if key_index >= len(tomtom_keys):
+            key_index = 0
             
         logging.info("Bắt đầu chu kỳ kéo Data TomTom (5 phút/lần)...")
         session_timeout = aiohttp.ClientTimeout(total=15)
@@ -164,41 +185,76 @@ async def poll_tomtom():
         async with aiohttp.ClientSession(timeout=session_timeout) as session:
             for loc_name, coords in LOCATIONS.items():
                 lat, lon = coords["lat"], coords["lon"]
-                
-                url_flow = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key={tomtom_api_key}&point={lat},{lon}"
-                
-                min_lon, min_lat = float(lon) - 0.005, float(lat) - 0.005
-                max_lon, max_lat = float(lon) + 0.005, float(lat) + 0.005
-                url_incident = f"https://api.tomtom.com/traffic/services/5/incidentDetails?key={tomtom_api_key}&bbox={min_lon},{min_lat},{max_lon},{max_lat}&fields={{incidents{{properties{{iconCategory,delay}}}}}}"
-                
-                try:
-                    flow_data = None
-                    async with session.get(url_flow) as respF:
-                        if respF.status == 200:
-                            flow_data = await respF.json()
-                            
-                    incident_count = 0
-                    async with session.get(url_incident) as respI:
-                        if respI.status == 200:
-                            inc_data = await respI.json()
-                            incidents = inc_data.get("incidents", [])
-                            incident_count = len(incidents)
-                            
-                    if flow_data:
-                        payload = {
-                            "ingestion_timestamp": iso_time,
-                            "location_name": loc_name,
-                            "latitude": lat,
-                            "longitude": lon,
-                            "tomtom_data": flow_data,
-                            "incident_count": incident_count
-                        }
-                        producer.send('traffic.raw', key=loc_name.encode('utf-8'), value=payload)
-                except Exception as e:
-                    logging.warning(f"Lỗi TomTom API tại {loc_name}: {e}")
+
+                attempts = 0
+                sent_payload = False
+                while attempts < len(tomtom_keys):
+                    current_key = tomtom_keys[key_index]
+                    url_flow = (
+                        "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json"
+                        f"?key={current_key}&point={lat},{lon}"
+                    )
+
+                    min_lon, min_lat = float(lon) - 0.005, float(lat) - 0.005
+                    max_lon, max_lat = float(lon) + 0.005, float(lat) + 0.005
+                    url_incident = (
+                        "https://api.tomtom.com/traffic/services/5/incidentDetails"
+                        f"?key={current_key}&bbox={min_lon},{min_lat},{max_lon},{max_lat}"
+                        "&fields={incidents{properties{iconCategory,delay}}}"
+                    )
+
+                    try:
+                        flow_data = None
+                        flow_status = None
+                        async with session.get(url_flow) as respF:
+                            flow_status = respF.status
+                            if respF.status == 200:
+                                flow_data = await respF.json()
+
+                        incident_count = 0
+                        incident_status = None
+                        async with session.get(url_incident) as respI:
+                            incident_status = respI.status
+                            if respI.status == 200:
+                                inc_data = await respI.json()
+                                incidents = inc_data.get("incidents", [])
+                                incident_count = len(incidents)
+
+                        if (flow_status and 400 <= flow_status < 500) or (
+                            incident_status and 400 <= incident_status < 500
+                        ):
+                            logging.warning(
+                                "TomTom key %s bi loi 4xx, chuyen sang key tiep theo.",
+                                mask_key(current_key),
+                            )
+                            key_index = (key_index + 1) % len(tomtom_keys)
+                            attempts += 1
+                            continue
+
+                        if flow_data:
+                            payload = {
+                                "ingestion_timestamp": iso_time,
+                                "location_name": loc_name,
+                                "latitude": lat,
+                                "longitude": lon,
+                                "tomtom_data": flow_data,
+                                "incident_count": incident_count
+                            }
+                            producer.send('traffic.raw', key=loc_name.encode('utf-8'), value=payload)
+                            sent_payload = True
+                        break
+                    except Exception as e:
+                        logging.warning(f"Lỗi TomTom API tại {loc_name}: {e}")
+                        break
+
+                if not sent_payload and attempts >= len(tomtom_keys):
+                    logging.error(
+                        "Tat ca TomTom keys deu bi loi 4xx. Dung polling TomTom."
+                    )
+                    return
                     
         producer.flush()
-        await asyncio.sleep(300)
+        await asyncio.sleep(60)
 
 async def check_minio_bucket():
     while True:

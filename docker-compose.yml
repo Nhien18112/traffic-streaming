@@ -40,6 +40,7 @@ services:
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic traffic.feature --partitions 1 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic traffic.prediction --partitions 1 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic traffic.dlq --partitions 1 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic model.finetuned --partitions 1 --replication-factor 1;
       exit 0;
       "
 
@@ -145,6 +146,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
       minio:
         condition: service_started
     volumes:
@@ -155,7 +158,8 @@ services:
   ai-worker:
     build:
       context: .
-      dockerfile: Dockerfile.ai
+      dockerfile: Dockerfile.ml
+      target: ai-worker
     container_name: traffic_ai_worker
     restart: always
     depends_on:
@@ -189,12 +193,14 @@ services:
     volumes:
       - ./src:/app/src
       - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
 
   # --- 11. MLOPS GRU INFERENCE (Dự đoán thời gian thực) ---
   gru-inference:
     build:
       context: .
-      dockerfile: Dockerfile.mlops
+      dockerfile: Dockerfile.ml
+      target: gru-inference
     container_name: traffic_gru_inference
     restart: always
     depends_on:
@@ -202,7 +208,29 @@ services:
         condition: service_healthy
     volumes:
       - ./src:/app/src
+      - model_checkpoints:/app/src/mlops/checkpoints
+      - inference_buffer:/app/src/mlops/buffer_state
     command: python /app/src/mlops/gru_inference.py
+
+  # --- 11b. MLOPS GRU CONTINUOUS FINE-TUNER (Lắng nghe dữ liệu mới & cập nhật model) ---
+  gru-finetuner:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+      target: gru-finetuner
+    container_name: traffic_gru_finetuner
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+      gru-inference:
+        condition: service_started
+    volumes:
+      - ./src:/app/src
+      - model_checkpoints:/app/src/mlops/checkpoints
+    command: python /app/src/mlops/gru_finetuner.py
+    environment:
+      - PYTHONUNBUFFERED=1
 
   # --- 12. PREDICTION SINK (Cắm Dự Báo vào DB) ---
   prediction-sink:
@@ -285,3 +313,5 @@ volumes:
   postgres_data:
   minio_data:
   redis_data:
+  model_checkpoints:
+  inference_buffer:

@@ -65,7 +65,8 @@ weather.raw -------------------------------------------+    |   |
 1. Create/update .env:
 
 ```env
-TOMTOM_API_KEY=your_tomtom_api_key
+TOMTOM_API_KEYS=key1,key2,key3
+# TOMTOM_API_KEY=your_tomtom_api_key
 WEATHER_API_KEY=your_openweather_api_key
 POSTGRES_URL=postgresql://traffic_user:traffic_pass@postgres:5432/trafficdb
 POSTGRES_JDBC_URL=jdbc:postgresql://postgres:5432/trafficdb

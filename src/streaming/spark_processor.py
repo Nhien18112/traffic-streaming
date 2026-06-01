@@ -111,6 +111,8 @@ def process_traffic_weather_batch(df, epoch_id):
                             col("location_name"),
                             col("currentSpeed"),
                             col("freeFlowSpeed"),
+                            col("currentTravelTime"),
+                            col("freeFlowTravelTime"),
                             col("incident_count"),
                         )
                     ).alias("value"),
@@ -145,6 +147,8 @@ def process_traffic_weather_batch(df, epoch_id):
                     r["visibility"],
                     r["currentSpeed"],
                     r["freeFlowSpeed"],
+                    r["currentTravelTime"],
+                    r["freeFlowTravelTime"],
                     r["incident_count"],
                 )
                 for r in valid_df.collect()
@@ -153,7 +157,7 @@ def process_traffic_weather_batch(df, epoch_id):
             upsert_query = """
                 INSERT INTO realtime_traffic_weather (
                     "time", location_name, weather_condition, temperature, humidity, wind_speed, visibility,
-                    "currentSpeed", "freeFlowSpeed", incident_count
+                    "currentSpeed", "freeFlowSpeed", "currentTravelTime", "freeFlowTravelTime", incident_count
                 )
                 VALUES %s
                 ON CONFLICT (location_name, "time") DO UPDATE SET
@@ -164,6 +168,8 @@ def process_traffic_weather_batch(df, epoch_id):
                     visibility = EXCLUDED.visibility,
                     "currentSpeed" = EXCLUDED."currentSpeed",
                     "freeFlowSpeed" = EXCLUDED."freeFlowSpeed",
+                    "currentTravelTime" = EXCLUDED."currentTravelTime",
+                    "freeFlowTravelTime" = EXCLUDED."freeFlowTravelTime",
                     incident_count = EXCLUDED.incident_count;
             """
 
@@ -320,6 +326,7 @@ def main():
     spark = SparkSession.builder \
         .appName("TrafficFeaturePipeline") \
         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.6.0,org.apache.hadoop:hadoop-aws:3.3.4") \
+        .config("spark.sql.streaming.stopGracefullyOnShutdown", "true") \
         .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
         .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
         .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
@@ -335,7 +342,9 @@ def main():
     tomtom_data_schema = StructType([
         StructField("flowSegmentData", StructType([
             StructField("currentSpeed", DoubleType(), True),
-            StructField("freeFlowSpeed", DoubleType(), True)
+            StructField("freeFlowSpeed", DoubleType(), True),
+            StructField("currentTravelTime", DoubleType(), True),
+            StructField("freeFlowTravelTime", DoubleType(), True)
         ]), True)
     ])
     
@@ -378,26 +387,26 @@ def main():
 
     df_traffic = df_traffic_raw.selectExpr("CAST(value AS STRING) as json_payload") \
         .select(from_json(col("json_payload"), traffic_schema).alias("data")).select("data.*") \
-        .withWatermark("ingestion_timestamp", "1 minute")
+        .withWatermark("ingestion_timestamp", "10 minutes")
 
     df_weather = df_weather_raw.selectExpr("CAST(value AS STRING) as json_payload") \
         .select(from_json(col("json_payload"), weather_schema).alias("data")).select("data.*") \
-        .withWatermark("ingestion_timestamp", "1 minute")
+        .withWatermark("ingestion_timestamp", "10 minutes")
 
     # Camera watermark có thể trễ hơn nếu cần, vì nó xử lý chậm
     df_camera = df_camera_raw.selectExpr("CAST(value AS STRING) as json_payload") \
         .select(from_json(col("json_payload"), camera_schema).alias("data")).select("data.*") \
-        .withWatermark("ingestion_timestamp", "1 minute")
+        .withWatermark("ingestion_timestamp", "10 minutes")
 
     # MẠNG LƯỚI STREAM 1 (FAST STREAM): GIAO THÔNG VÀ THỜI TIẾT
     traffic_weather_joined = df_traffic.alias("t").join(
         df_weather.alias("w"),
         expr("""
             t.location_name = w.location_name AND
-            w.ingestion_timestamp >= t.ingestion_timestamp - INTERVAL 1 MINUTE AND
-            w.ingestion_timestamp <= t.ingestion_timestamp + INTERVAL 1 MINUTE
+            w.ingestion_timestamp >= t.ingestion_timestamp - INTERVAL 5 MINUTES AND
+            w.ingestion_timestamp <= t.ingestion_timestamp + INTERVAL 5 MINUTES
         """),
-        "inner"
+        "left"
     ).select(
         col("t.ingestion_timestamp").alias("time"),
         col("t.location_name"),
@@ -408,20 +417,24 @@ def main():
         col("w.visibility"),
         col("t.tomtom_data.flowSegmentData.currentSpeed").alias("currentSpeed"), 
         col("t.tomtom_data.flowSegmentData.freeFlowSpeed").alias("freeFlowSpeed"),
+        col("t.tomtom_data.flowSegmentData.currentTravelTime").alias("currentTravelTime"),
+        col("t.tomtom_data.flowSegmentData.freeFlowTravelTime").alias("freeFlowTravelTime"),
         col("t.incident_count")
     )
 
     query_traffic = traffic_weather_joined.writeStream \
         .foreachBatch(process_traffic_weather_batch) \
         .outputMode("append") \
-        .option("checkpointLocation", "s3a://raw-data-lake/checkpoints/traffic_pipeline") \
+        .option("checkpointLocation", "file:/app/checkpoints/traffic_pipeline") \
+        .trigger(processingTime="30 seconds") \
         .start()
 
     # MẠNG LƯỚI STREAM 2 (SLOW STREAM): XỬ LÝ ẢNH CAMERA ĐỘC LẬP
     query_camera = df_camera.writeStream \
         .foreachBatch(process_camera_batch) \
         .outputMode("append") \
-        .option("checkpointLocation", "s3a://raw-data-lake/checkpoints/camera_pipeline") \
+        .option("checkpointLocation", "file:/app/checkpoints/camera_pipeline") \
+        .trigger(processingTime="30 seconds") \
         .start()
 
     spark.streams.awaitAnyTermination()

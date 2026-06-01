@@ -77,6 +77,17 @@ h1, h2, h3, h4 {
   align-items: center;
 }
 
+.quick-nav {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.quick-nav button {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
 button {
   border: 1px solid var(--line);
   background: var(--panel);
@@ -493,6 +504,156 @@ th, td {
   color: var(--muted);
 }
 
+.map-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+  align-items: start;
+}
+
+.map-frame,
+.map-detail {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+.map-frame {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+}
+
+.map-canvas {
+  width: 100%;
+  height: 420px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+
+.map-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.map-detail-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.locations-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 0.9rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.locations-list,
+.location-detail-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+.locations-list-head {
+  margin-bottom: 0.75rem;
+}
+
+.locations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+
+.location-item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.8rem;
+  background: linear-gradient(170deg, #ffffff 0%, #f4f8ff 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  gap: 0.6rem;
+}
+
+.location-item h4 {
+  margin-bottom: 0.3rem;
+}
+
+.location-item.active {
+  border-color: rgba(14, 165, 160, 0.7);
+  box-shadow: 0 12px 22px rgba(14, 165, 160, 0.18);
+}
+
+.location-chip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(14, 165, 160, 0.35);
+  background: rgba(14, 165, 160, 0.1);
+  color: #0f766e;
+}
+
+.location-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.location-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 0.8rem;
+  align-items: stretch;
+}
+
+.camera-frame {
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.camera-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.prediction-card {
+  border: 1px solid rgba(14, 165, 160, 0.35);
+  border-radius: 14px;
+  padding: 0.9rem;
+  background: rgba(14, 165, 160, 0.08);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.prediction-card .predicted-speed {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin: 0.2rem 0;
+}
+
 .scenario-card .scenario-grid {
   margin-top: 0.75rem;
   display: grid;
@@ -648,7 +809,9 @@ th, td {
   .insight-strip,
   .control-deck,
   .story-wall,
-  .scenario-card .scenario-grid {
+  .scenario-card .scenario-grid,
+  .locations-panel,
+  .map-panel {
     grid-template-columns: 1fr;
   }
 

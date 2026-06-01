@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import {
   LineChart,
   Line,
@@ -27,7 +31,9 @@ const WEATHER_ICON = {
 const tabs = [
   { id: 'overview', label: 'Overview' },
   { id: 'traffic', label: 'Traffic' },
-  { id: 'weather', label: 'Weather' }
+  { id: 'weather', label: 'Weather' },
+  { id: 'map', label: 'Map' },
+  { id: 'locations', label: 'Locations' }
 ];
 
 const CITY_SCENE_IMAGES = [
@@ -50,7 +56,7 @@ const TRAFFIC_STORY_CARDS = [
   {
     title: 'Signal Bottlenecks',
     subtitle: 'Locate high-volume, low-speed intersections',
-    image: 'https://images.unsplash.com/photo-1461716834815-9a3d6b7f2f12?auto=format&fit=crop&w=1200&q=80'
+    image: 'https://images.unsplash.com/photo-1465447142348-e9952c393450?auto=format&fit=crop&w=1600&q=80'
   }
 ];
 
@@ -98,6 +104,7 @@ function App() {
   const [weatherRows, setWeatherRows] = useState([]);
   const [cameraCoverage, setCameraCoverage] = useState([]);
   const [cameraCritical, setCameraCritical] = useState([]);
+  const [locationCatalog, setLocationCatalog] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
@@ -109,6 +116,17 @@ function App() {
   const [horizonData, setHorizonData] = useState(null);
   const [detailError, setDetailError] = useState('');
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [locationTabSelected, setLocationTabSelected] = useState('');
+  const [locationTabDetail, setLocationTabDetail] = useState(null);
+  const [locationTabError, setLocationTabError] = useState('');
+  const [locationTabLoading, setLocationTabLoading] = useState(false);
+  const [mapSelectedLocation, setMapSelectedLocation] = useState('');
+  const [mapDetail, setMapDetail] = useState(null);
+  const [mapError, setMapError] = useState('');
+  const [mapLoading, setMapLoading] = useState(false);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRefs = useRef([]);
 
   const heroImage = CITY_SCENE_IMAGES[new Date().getMinutes() % CITY_SCENE_IMAGES.length];
 
@@ -145,6 +163,22 @@ function App() {
     if (sortMode === 'ratio-asc') sorted.sort((a, b) => (a.avg_speed_ratio ?? 999) - (b.avg_speed_ratio ?? 999));
     return sorted;
   }, [summaryRows, locationFilter, minVehicles, sortMode]);
+
+  const filteredLocations = useMemo(() => {
+    const keyword = locationFilter.trim().toLowerCase();
+    const base = locationCatalog.length
+      ? locationCatalog
+      : summaryRows.map((row) => ({ location_name: row.location_name }));
+    return base.filter((row) => (row.location_name || '').toLowerCase().includes(keyword));
+  }, [locationCatalog, summaryRows, locationFilter]);
+
+  const mapCenter = useMemo(() => {
+    const points = locationCatalog.filter((row) => row.lat != null && row.lon != null);
+    if (!points.length) return { lat: 10.77, lng: 106.67 };
+    const avgLat = points.reduce((acc, row) => acc + row.lat, 0) / points.length;
+    const avgLon = points.reduce((acc, row) => acc + row.lon, 0) / points.length;
+    return { lat: avgLat, lng: avgLon };
+  }, [locationCatalog]);
 
   const topHotspot = useMemo(() => filteredSummaryRows[0] || null, [filteredSummaryRows]);
 
@@ -203,12 +237,13 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      const [healthData, latestData, summaryData, weatherData, coverageData] = await Promise.all([
+      const [healthData, latestData, summaryData, weatherData, coverageData, locationData] = await Promise.all([
         fetchJson('/api/health'),
         fetchJson('/api/traffic/latest'),
         fetchJson('/api/traffic/summary'),
         fetchJson('/api/weather/impact'),
-        fetchJson('/api/diagnostics/camera-coverage?hours=1')
+        fetchJson('/api/diagnostics/camera-coverage?hours=1'),
+        fetchJson('/api/locations')
       ]);
 
       setHealth(healthData);
@@ -217,10 +252,43 @@ function App() {
       setWeatherRows(weatherData.data || []);
       setCameraCoverage(coverageData.data || []);
       setCameraCritical(coverageData.critical_locations || []);
+      setLocationCatalog(locationData.data || []);
     } catch (e) {
       setError(e.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openLocationPanel = async (locationName) => {
+    if (!locationName) return;
+    setLocationTabSelected(locationName);
+    setLocationTabLoading(true);
+    setLocationTabError('');
+    try {
+      const horizonPayload = await fetchJson(`/api/traffic/horizon/${locationName}`);
+      setLocationTabDetail(horizonPayload.data || null);
+    } catch (e) {
+      setLocationTabDetail(null);
+      setLocationTabError(e.message || 'Failed to load prediction detail');
+    } finally {
+      setLocationTabLoading(false);
+    }
+  };
+
+  const openMapLocation = async (locationName) => {
+    if (!locationName) return;
+    setMapSelectedLocation(locationName);
+    setMapLoading(true);
+    setMapError('');
+    try {
+      const horizonPayload = await fetchJson(`/api/traffic/horizon/${locationName}`);
+      setMapDetail(horizonPayload.data || null);
+    } catch (e) {
+      setMapDetail(null);
+      setMapError(e.message || 'Failed to load prediction detail');
+    } finally {
+      setMapLoading(false);
     }
   };
 
@@ -257,9 +325,55 @@ function App() {
 
   useEffect(() => {
     refreshAll();
-    const timer = setInterval(refreshAll, 30000);
+    const timer = setInterval(refreshAll, 10000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: markerIcon2x,
+      iconUrl: markerIcon,
+      shadowUrl: markerShadow
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+    const map = L.map(mapRef.current, {
+      center: [mapCenter.lat, mapCenter.lng],
+      zoom: 12,
+      zoomControl: true
+    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    mapInstanceRef.current = map;
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, [mapCenter]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.setView([mapCenter.lat, mapCenter.lng], mapInstanceRef.current.getZoom());
+  }, [mapCenter]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    markerRefs.current.forEach((marker) => marker.remove());
+    markerRefs.current = [];
+
+    locationCatalog
+      .filter((row) => row.lat != null && row.lon != null)
+      .forEach((row) => {
+        const marker = L.marker([row.lat, row.lon], {
+          title: formatName(row.location_name)
+        }).addTo(mapInstanceRef.current);
+        marker.on('click', () => openMapLocation(row.location_name));
+        markerRefs.current.push(marker);
+      });
+  }, [locationCatalog]);
 
   return (
     <div className="app-shell">
@@ -273,6 +387,14 @@ function App() {
           <div className={`status-pill ${health ? 'online' : 'offline'}`}>
             <span className="dot" />
             {health ? 'System Online' : 'No API'}
+          </div>
+          <div className="quick-nav">
+            <button type="button" onClick={() => setActiveTab('map')}>
+              Open Map
+            </button>
+            <button type="button" onClick={() => setActiveTab('locations')}>
+              Open Cameras
+            </button>
           </div>
           <button onClick={refreshAll} disabled={loading}>
             {loading ? 'Refreshing...' : 'Refresh'}
@@ -517,6 +639,147 @@ function App() {
               <small>{row.sample_count} samples</small>
             </article>
           ))}
+        </section>
+      )}
+
+      {activeTab === 'map' && (
+        <section className="map-panel">
+          <div className="map-frame">
+            <div ref={mapRef} className="map-canvas" />
+          </div>
+          <div className="map-detail">
+            {!mapSelectedLocation && (
+              <div className="muted">Click a marker to see camera and +15m forecast.</div>
+            )}
+
+            {mapSelectedLocation && (
+              <>
+                <div className="map-detail-head">
+                  <div>
+                    <h3>{formatName(mapSelectedLocation)}</h3>
+                    <p className="muted">Prediction horizon: +15 minutes</p>
+                  </div>
+                  <div>
+                    {locationCatalog.find((row) => row.location_name === mapSelectedLocation)?.has_camera ? (
+                      <span className="chip">Camera</span>
+                    ) : (
+                      <span className="chip feed-missing">No camera</span>
+                    )}
+                  </div>
+                </div>
+
+                {mapLoading && <p className="muted">Loading prediction...</p>}
+                {!mapLoading && mapError && <div className="error-banner">{mapError}</div>}
+
+                {!mapLoading && !mapError && (
+                  <div className="map-detail-grid">
+                    <div className="camera-frame">
+                      {locationCatalog.find((row) => row.location_name === mapSelectedLocation)?.camera_url ? (
+                        <img
+                          src={locationCatalog.find((row) => row.location_name === mapSelectedLocation)?.camera_url}
+                          alt={`Camera ${formatName(mapSelectedLocation)}`}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="muted">No camera image for this location.</div>
+                      )}
+                    </div>
+                    <div className="prediction-card">
+                      <h4>Predicted speed +15m</h4>
+                      <p className="predicted-speed">
+                        {mapDetail?.horizons?.['15m']?.speed?.toFixed?.(1) || '-'} km/h
+                      </p>
+                      <small>Updated: {formatTime(mapDetail?.event_time)}</small>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'locations' && (
+        <section className="locations-panel">
+          <div className="locations-list">
+            <div className="locations-list-head">
+              <h3>Chosen Locations</h3>
+              <p className="muted">Tap a location to see camera and +15m prediction.</p>
+            </div>
+            {filteredLocations.length === 0 && (
+              <div className="muted">No locations match current filter.</div>
+            )}
+            <div className="locations-grid">
+              {filteredLocations.map((row) => (
+                <button
+                  type="button"
+                  key={row.location_name}
+                  className={`location-item ${locationTabSelected === row.location_name ? 'active' : ''}`}
+                  onClick={() => openLocationPanel(row.location_name)}
+                >
+                  <div>
+                    <h4>{formatName(row.location_name)}</h4>
+                    <p className="muted">
+                      {row.has_camera ? 'Camera available' : 'No camera mapped'}
+                    </p>
+                  </div>
+                  <span className="location-chip">View</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="location-detail-card">
+            {!locationTabSelected && (
+              <div className="muted">Select a location to preview camera and prediction.</div>
+            )}
+
+            {locationTabSelected && (
+              <>
+                <div className="location-detail-head">
+                  <div>
+                    <h3>{formatName(locationTabSelected)}</h3>
+                    <p className="muted">Prediction horizon: +15 minutes</p>
+                  </div>
+                  <div className="location-meta">
+                    {locationCatalog.find((row) => row.location_name === locationTabSelected)?.has_camera ? (
+                      <span className="chip">Camera</span>
+                    ) : (
+                      <span className="chip feed-missing">No camera</span>
+                    )}
+                  </div>
+                </div>
+
+                {locationTabLoading && <p className="muted">Loading prediction...</p>}
+                {!locationTabLoading && locationTabError && (
+                  <div className="error-banner">{locationTabError}</div>
+                )}
+
+                {!locationTabLoading && !locationTabError && (
+                  <div className="location-detail-grid">
+                    <div className="camera-frame">
+                      {locationCatalog.find((row) => row.location_name === locationTabSelected)?.camera_url ? (
+                        <img
+                          src={locationCatalog.find((row) => row.location_name === locationTabSelected)?.camera_url}
+                          alt={`Camera ${formatName(locationTabSelected)}`}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="muted">No camera image for this location.</div>
+                      )}
+                    </div>
+                    <div className="prediction-card">
+                      <h4>Predicted speed +15m</h4>
+                      <p className="predicted-speed">
+                        {locationTabDetail?.horizons?.['15m']?.speed?.toFixed?.(1) || '-'} km/h
+                      </p>
+                      <small>Updated: {formatTime(locationTabDetail?.event_time)}</small>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </section>
       )}
 

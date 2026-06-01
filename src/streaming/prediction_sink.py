@@ -116,7 +116,13 @@ def main():
                         f"Bỏ qua prediction của {location} tại {p_time}: chưa tìm thấy record realtime tương ứng."
                     )
                 else:
-                    logging.info(f"Đã cập nhật prediction cho {location}")
+                    # LOGGING MỚI: In ra chi tiết tốc độ 3 mốc thời gian để dễ dàng theo dõi
+                    logging.info(
+                        f"[{location}] Đã cập nhật | "
+                        f"5m: {p_speed_5m} km/h ({p_label_5m}) | "
+                        f"10m: {p_speed_10m} km/h ({p_label_10m}) | "
+                        f"15m: {p_speed_15m} km/h ({p_label_15m})"
+                    )
             except Exception as e:
                 conn.rollback()
                 logging.error(f"Lỗi Postgres: {e}")
