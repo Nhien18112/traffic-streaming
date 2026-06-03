@@ -17,23 +17,35 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 const WEATHER_ICON = {
-  Rain: 'Rain',
-  Clouds: 'Clouds',
-  Clear: 'Clear',
-  Thunderstorm: 'Storm',
-  Drizzle: 'Drizzle',
-  Mist: 'Mist',
-  Haze: 'Haze',
-  Fog: 'Fog',
-  Snow: 'Snow'
+  Rain: 'Mưa',
+  Clouds: 'Mây',
+  Clear: 'Trời quang',
+  Thunderstorm: 'Giông',
+  Drizzle: 'Mưa phùn',
+  Mist: 'Sương mù',
+  Haze: 'Hơi mù',
+  Fog: 'Sương mù dày',
+  Snow: 'Tuyết'
+};
+
+const WEATHER_LABEL = {
+  Rain: 'Mưa',
+  Clouds: 'Mây',
+  Clear: 'Trời quang',
+  Thunderstorm: 'Giông',
+  Drizzle: 'Mưa phùn',
+  Mist: 'Sương mù',
+  Haze: 'Hơi mù',
+  Fog: 'Sương mù dày',
+  Snow: 'Tuyết'
 };
 
 const tabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'traffic', label: 'Traffic' },
-  { id: 'weather', label: 'Weather' },
-  { id: 'map', label: 'Map' },
-  { id: 'locations', label: 'Locations' }
+  { id: 'overview', label: 'Tổng quan' },
+  { id: 'traffic', label: 'Giao thông' },
+  { id: 'weather', label: 'Thời tiết' },
+  { id: 'map', label: 'Bản đồ' },
+  { id: 'locations', label: 'Vị trí' }
 ];
 
 const CITY_SCENE_IMAGES = [
@@ -44,18 +56,18 @@ const CITY_SCENE_IMAGES = [
 
 const TRAFFIC_STORY_CARDS = [
   {
-    title: 'Morning Pulse',
-    subtitle: 'Track pre-rush flow in dense corridors',
+    title: 'Nhịp sáng sớm',
+    subtitle: 'Theo dõi dòng xe trước giờ cao điểm',
     image: 'https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=1200&q=80'
   },
   {
-    title: 'Rain Stress',
-    subtitle: 'Compare weather vs speed drops instantly',
+    title: 'Áp lực mưa',
+    subtitle: 'So sánh thời tiết và suy giảm vận tốc tức thì',
     image: 'https://images.unsplash.com/photo-1519692933481-e162a57d6721?auto=format&fit=crop&w=1200&q=80'
   },
   {
-    title: 'Signal Bottlenecks',
-    subtitle: 'Locate high-volume, low-speed intersections',
+    title: 'Nghẽn nút tín hiệu',
+    subtitle: 'Định vị giao lộ lưu lượng cao, tốc độ thấp',
     image: 'https://images.unsplash.com/photo-1465447142348-e9952c393450?auto=format&fit=crop&w=1600&q=80'
   }
 ];
@@ -81,11 +93,11 @@ function scoreClass(ratio) {
 }
 
 function formatRelativeMinutes(value) {
-  if (!value) return 'No data';
+  if (!value) return 'Không có dữ liệu';
   const deltaMs = Date.now() - new Date(value).getTime();
   const mins = Math.max(0, Math.round(deltaMs / 60000));
-  if (mins < 1) return 'Updated just now';
-  return `Updated ${mins} min ago`;
+  if (mins < 1) return 'Vừa cập nhật';
+  return `Cập nhật ${mins} phút trước`;
 }
 
 async function fetchJson(path, options) {
@@ -204,7 +216,7 @@ function App() {
       return {
         delta: 0,
         etaMinutes: 0,
-        status: 'Waiting for summary data'
+        status: 'Đang chờ dữ liệu tổng hợp'
       };
     }
     const delta = Math.max(0, targetSpeed - avgSpeedValue);
@@ -212,13 +224,13 @@ function App() {
       return {
         delta: 0,
         etaMinutes: 0,
-        status: 'Target reached with current performance'
+        status: 'Đã đạt mục tiêu với hiệu năng hiện tại'
       };
     }
     return {
       delta,
       etaMinutes: Math.ceil(delta * 6),
-      status: 'Requires intervention on bottlenecks'
+      status: 'Cần can thiệp vào điểm nghẽn'
     };
   }, [targetSpeed, avgSpeedValue]);
 
@@ -254,7 +266,7 @@ function App() {
       setCameraCritical(coverageData.critical_locations || []);
       setLocationCatalog(locationData.data || []);
     } catch (e) {
-      setError(e.message || 'Failed to load dashboard data');
+      setError(e.message || 'Không thể tải dữ liệu bảng điều khiển');
     } finally {
       setLoading(false);
     }
@@ -270,7 +282,7 @@ function App() {
       setLocationTabDetail(horizonPayload.data || null);
     } catch (e) {
       setLocationTabDetail(null);
-      setLocationTabError(e.message || 'Failed to load prediction detail');
+      setLocationTabError(e.message || 'Không thể tải chi tiết dự đoán');
     } finally {
       setLocationTabLoading(false);
     }
@@ -286,7 +298,7 @@ function App() {
       setMapDetail(horizonPayload.data || null);
     } catch (e) {
       setMapDetail(null);
-      setMapError(e.message || 'Failed to load prediction detail');
+      setMapError(e.message || 'Không thể tải chi tiết dự đoán');
     } finally {
       setMapLoading(false);
     }
@@ -309,7 +321,7 @@ function App() {
     } catch (e) {
       setLocationHistory([]);
       setHorizonData(null);
-      setDetailError(e.message || 'Failed to load location detail');
+      setDetailError(e.message || 'Không thể tải chi tiết vị trí');
     } finally {
       setLoadingDetail(false);
     }
@@ -380,24 +392,24 @@ function App() {
       <div className="backdrop-grid" />
       <header className="topbar">
         <div>
-          <p className="eyebrow">Urban Command Surface</p>
-          <h1>Traffic Intelligence Dashboard</h1>
+          <p className="eyebrow">Trung tâm Điều hành Đô thị</p>
+          <h1>Bảng điều khiển Giao thông</h1>
         </div>
         <div className="topbar-actions">
           <div className={`status-pill ${health ? 'online' : 'offline'}`}>
             <span className="dot" />
-            {health ? 'System Online' : 'No API'}
+            {health ? 'Hệ thống hoạt động' : 'Không có API'}
           </div>
           <div className="quick-nav">
             <button type="button" onClick={() => setActiveTab('map')}>
-              Open Map
+              Mở bản đồ
             </button>
             <button type="button" onClick={() => setActiveTab('locations')}>
-              Open Cameras
+              Mở camera
             </button>
           </div>
           <button onClick={refreshAll} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh'}
+            {loading ? 'Đang làm mới...' : 'Làm mới'}
           </button>
         </div>
       </header>
@@ -405,45 +417,45 @@ function App() {
       <section className="hero-stage" style={{ backgroundImage: `url(${heroImage})` }}>
         <div className="hero-overlay" />
         <div className="hero-content">
-          <p className="eyebrow">City Live Canvas</p>
-          <h2>Realtime Mobility Storyboard</h2>
+          <p className="eyebrow">Bản đồ Sống động Đô thị</p>
+          <h2>Bức tranh Di chuyển Thời gian thực</h2>
           <p>
-            Theo doi dong giao thong theo thoi gian thuc, loc diem nong linh hoat,
-            va mo phong muc toc do muc tieu ngay tren dashboard.
+            Theo dõi dòng giao thông theo thời gian thực, lọc điểm nóng linh hoạt,
+            và mô phỏng mức tốc độ mục tiêu ngay trên bảng điều khiển.
           </p>
           <div className="hero-tags">
-            <span>Freshness: {formatRelativeMinutes(health?.latest_data)}</span>
-            <span>Prediction Drift: {predictionDrift.toFixed(1)} km/h</span>
-            <span>Weather Risk Nodes: {weatherRiskCount}</span>
+            <span>Độ mới: {formatRelativeMinutes(health?.latest_data)}</span>
+            <span>Độ lệch dự đoán: {predictionDrift.toFixed(1)} km/h</span>
+            <span>Điểm rủi ro thời tiết: {weatherRiskCount}</span>
           </div>
         </div>
       </section>
 
       <section className="insight-strip">
         <article className="insight-card">
-          <h4>Slowest Hotspot</h4>
+          <h4>Điểm nóng chậm nhất</h4>
           <p>{topHotspot ? formatName(topHotspot.location_name) : '-'}</p>
-          <small>{topHotspot ? `${topHotspot.avg_speed?.toFixed?.(1) || '-'} km/h` : 'No location'}</small>
+          <small>{topHotspot ? `${topHotspot.avg_speed?.toFixed?.(1) || '-'} km/h` : 'Chưa có vị trí'}</small>
         </article>
         <article className="insight-card">
-          <h4>Busiest Junction</h4>
+          <h4>Giao lộ đông nhất</h4>
           <p>{busiestNode ? formatName(busiestNode.location_name) : '-'}</p>
-          <small>{busiestNode ? `${(busiestNode.total_vehicles || 0).toLocaleString('vi-VN')} vehicles` : 'No data'}</small>
+          <small>{busiestNode ? `${(busiestNode.total_vehicles || 0).toLocaleString('vi-VN')} xe` : 'Không có dữ liệu'}</small>
         </article>
         <article className="insight-card">
-          <h4>System Freshness</h4>
+          <h4>Độ mới hệ thống</h4>
           <p>{formatRelativeMinutes(health?.latest_data)}</p>
-          <small>Latest ingest heartbeat</small>
+          <small>Nhịp nhận dữ liệu mới nhất</small>
         </article>
       </section>
 
       <section className="coverage-panel">
         <div className="coverage-head">
-          <h3>Camera Coverage (1h)</h3>
-          <p className="muted">Theo doi location mat feed camera hoac stale feed.</p>
+          <h3>Độ bao phủ camera (1 giờ)</h3>
+          <p className="muted">Theo dõi vị trí mất feed camera hoặc bị trễ.</p>
         </div>
         {cameraCritical.length === 0 ? (
-          <div className="coverage-ok">All locations have healthy camera matching in the last hour.</div>
+          <div className="coverage-ok">Tất cả vị trí đều ổn định trong 1 giờ qua.</div>
         ) : (
           <div className="coverage-critical-wrap">
             {cameraCritical.map((name) => (
@@ -455,10 +467,10 @@ function App() {
           {cameraCoverage.slice(0, 8).map((row) => (
             <article key={row.location_name} className="coverage-card">
               <h4>{formatName(row.location_name)}</h4>
-              <p>Coverage: {row.coverage_pct ?? 0}%</p>
-              <p>Zero rows: {row.zero_pct ?? 0}%</p>
+              <p>Độ bao phủ: {row.coverage_pct ?? 0}%</p>
+              <p>Tỷ lệ 0 dòng: {row.zero_pct ?? 0}%</p>
               <small>
-                {row.stale_minutes == null ? 'No camera data' : `Stale: ${row.stale_minutes} min`}
+                {row.stale_minutes == null ? 'Không có dữ liệu camera' : `Trễ: ${row.stale_minutes} phút`}
               </small>
             </article>
           ))}
@@ -467,16 +479,16 @@ function App() {
 
       <section className="control-deck">
         <div className="control-item">
-          <label htmlFor="filter-location">Filter location</label>
+          <label htmlFor="filter-location">Lọc vị trí</label>
           <input
             id="filter-location"
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
-            placeholder="Type location keyword"
+            placeholder="Nhập từ khóa vị trí"
           />
         </div>
         <div className="control-item">
-          <label htmlFor="filter-vehicles">Min vehicles: {minVehicles}</label>
+          <label htmlFor="filter-vehicles">Số xe tối thiểu: {minVehicles}</label>
           <input
             id="filter-vehicles"
             type="range"
@@ -488,12 +500,12 @@ function App() {
           />
         </div>
         <div className="control-item">
-          <label htmlFor="sort-mode">Sort</label>
+          <label htmlFor="sort-mode">Sắp xếp</label>
           <select id="sort-mode" value={sortMode} onChange={(e) => setSortMode(e.target.value)}>
-            <option value="speed-asc">Speed asc (hotspot first)</option>
-            <option value="speed-desc">Speed desc</option>
-            <option value="vehicles-desc">Vehicles desc</option>
-            <option value="ratio-asc">Ratio asc</option>
+            <option value="speed-asc">Tốc độ tăng (điểm nóng trước)</option>
+            <option value="speed-desc">Tốc độ giảm</option>
+            <option value="vehicles-desc">Lượng xe giảm</option>
+            <option value="ratio-asc">Tỷ lệ tăng</option>
           </select>
         </div>
       </section>
@@ -510,28 +522,28 @@ function App() {
         ))}
       </nav>
 
-      {error && <div className="error-banner">Data load error: {error}</div>}
+      {error && <div className="error-banner">Lỗi tải dữ liệu: {error}</div>}
 
       {activeTab === 'overview' && (
         <section className="panel-grid">
           <article className="stat-card">
-            <h3>Total Records</h3>
+            <h3>Tổng bản ghi</h3>
             <p>{health?.total_records?.toLocaleString?.('vi-VN') || '-'}</p>
-            <small>Latest: {formatTime(health?.latest_data)}</small>
+            <small>Mới nhất: {formatTime(health?.latest_data)}</small>
           </article>
           <article className="stat-card">
-            <h3>Average Speed</h3>
+            <h3>Tốc độ trung bình</h3>
             <p>{avgSpeed} km/h</p>
-            <small>Across active locations</small>
+            <small>Trên các vị trí đang hoạt động</small>
           </article>
           <article className="stat-card">
-            <h3>Total Vehicles</h3>
+            <h3>Tổng số xe</h3>
             <p>{totalVehicles}</p>
-            <small>Aggregated camera counters</small>
+            <small>Tổng hợp từ đếm camera</small>
           </article>
 
           <article className="wide-card">
-            <h3>Location Summary</h3>
+            <h3>Tổng hợp theo vị trí</h3>
             <div className="summary-grid">
               {filteredSummaryRows.map((row) => (
                 <div
@@ -547,26 +559,26 @@ function App() {
                   <div className={`score-bar ${scoreClass(row.avg_speed_ratio)}`}>
                     <span style={{ width: `${Math.max(2, Math.round((row.avg_speed_ratio || 0) * 100))}%` }} />
                   </div>
-                  <p>{(row.total_vehicles || 0).toLocaleString('vi-VN')} vehicles</p>
+                  <p>{(row.total_vehicles || 0).toLocaleString('vi-VN')} xe</p>
                   <div className="vehicle-breakdown">
-                    <span>Xe may: {(row.total_motorcycle || 0).toLocaleString('vi-VN')}</span>
-                    <span>O to: {(row.total_car || 0).toLocaleString('vi-VN')}</span>
-                    <span>Bus/tai: {(row.total_bus_truck || 0).toLocaleString('vi-VN')}</span>
+                    <span>Xe máy: {(row.total_motorcycle || 0).toLocaleString('vi-VN')}</span>
+                    <span>Ô tô: {(row.total_car || 0).toLocaleString('vi-VN')}</span>
+                    <span>Bus/tải: {(row.total_bus_truck || 0).toLocaleString('vi-VN')}</span>
                   </div>
                 </div>
               ))}
             </div>
             {filteredSummaryRows.length === 0 && (
-              <p className="muted">No locations match current filter.</p>
+              <p className="muted">Không có vị trí phù hợp bộ lọc hiện tại.</p>
             )}
           </article>
 
           <article className="wide-card scenario-card">
-            <h3>What-if Simulator</h3>
-            <p className="muted">Target average speed to evaluate intervention urgency.</p>
+            <h3>Mô phỏng kịch bản</h3>
+            <p className="muted">Đặt mức tốc độ trung bình để đánh giá mức độ ưu tiên.</p>
             <div className="scenario-grid">
               <label htmlFor="target-speed" className="scenario-input">
-                Target speed: {targetSpeed} km/h
+                Tốc độ mục tiêu: {targetSpeed} km/h
                 <input
                   id="target-speed"
                   type="range"
@@ -578,9 +590,9 @@ function App() {
                 />
               </label>
               <div className="scenario-result">
-                <p>Current avg: {avgSpeed} km/h</p>
-                <p>Required uplift: {scenarioResult.delta.toFixed(1)} km/h</p>
-                <p>Estimated stabilization: {scenarioResult.etaMinutes} min</p>
+                <p>Trung bình hiện tại: {avgSpeed} km/h</p>
+                <p>Cần tăng: {scenarioResult.delta.toFixed(1)} km/h</p>
+                <p>Dự kiến ổn định: {scenarioResult.etaMinutes} phút</p>
                 <small>{scenarioResult.status}</small>
               </div>
             </div>
@@ -590,21 +602,21 @@ function App() {
 
       {activeTab === 'traffic' && (
         <section className="table-panel">
-          <h3>Realtime Traffic Feed</h3>
+          <h3>Dòng giao thông thời gian thực</h3>
           <table>
             <thead>
               <tr>
-                <th>Location</th>
-                <th>Current</th>
-                <th>Predicted</th>
-                <th>Congestion</th>
-                <th>Updated</th>
+                <th>Vị trí</th>
+                <th>Hiện tại</th>
+                <th>Dự đoán</th>
+                <th>Ùn tắc</th>
+                <th>Cập nhật</th>
               </tr>
             </thead>
             <tbody>
               {latestRows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="muted">No traffic feature data yet. Check FAST stream and topic flow.</td>
+                  <td colSpan={5} className="muted">Chưa có dữ liệu. Kiểm tra luồng FAST và chủ đề.</td>
                 </tr>
               )}
               {latestRows.map((row) => (
@@ -614,29 +626,29 @@ function App() {
                   <td>{row.predicted_speed?.toFixed?.(1) || '-'} km/h</td>
                   <td>
                     <span className={`chip ${scoreClass(row.speed_ratio)}`}>
-                      {row.congestion_label || 'Unknown'}
+                      {row.congestion_label || 'Không rõ'}
                     </span>
-                    {row.no_camera_feed && <span className="chip feed-missing">No camera feed</span>}
+                    {row.no_camera_feed && <span className="chip feed-missing">Mất feed camera</span>}
                   </td>
                   <td>{formatTime(row.event_time)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="muted">Click a row to view model horizons and vehicle-type details.</p>
+          <p className="muted">Bấm vào dòng để xem chi tiết mô hình và từng loại xe.</p>
         </section>
       )}
 
       {activeTab === 'weather' && (
         <section className="weather-grid">
-          {weatherRows.length === 0 && <div className="muted">No weather impact rows available yet.</div>}
+          {weatherRows.length === 0 && <div className="muted">Chưa có dữ liệu ảnh hưởng thời tiết.</div>}
           {weatherRows.map((row) => (
             <article key={row.weather_condition} className="weather-card">
-              <h4>{WEATHER_ICON[row.weather_condition] || 'Weather'}</h4>
-              <p className="wx-title">{row.weather_condition}</p>
+              <h4>{WEATHER_ICON[row.weather_condition] || 'Thời tiết'}</h4>
+              <p className="wx-title">{WEATHER_LABEL[row.weather_condition] || row.weather_condition}</p>
               <p>{row.avg_temperature?.toFixed?.(1) || '-'} C</p>
               <p>{row.avg_speed?.toFixed?.(1) || '-'} km/h</p>
-              <small>{row.sample_count} samples</small>
+              <small>{row.sample_count} mẫu</small>
             </article>
           ))}
         </section>
@@ -649,7 +661,7 @@ function App() {
           </div>
           <div className="map-detail">
             {!mapSelectedLocation && (
-              <div className="muted">Click a marker to see camera and +15m forecast.</div>
+              <div className="muted">Bấm vào marker để xem camera và dự đoán +15 phút.</div>
             )}
 
             {mapSelectedLocation && (
@@ -657,18 +669,18 @@ function App() {
                 <div className="map-detail-head">
                   <div>
                     <h3>{formatName(mapSelectedLocation)}</h3>
-                    <p className="muted">Prediction horizon: +15 minutes</p>
+                    <p className="muted">Khung dự đoán: +15 phút</p>
                   </div>
                   <div>
                     {locationCatalog.find((row) => row.location_name === mapSelectedLocation)?.has_camera ? (
                       <span className="chip">Camera</span>
                     ) : (
-                      <span className="chip feed-missing">No camera</span>
+                      <span className="chip feed-missing">Không có camera</span>
                     )}
                   </div>
                 </div>
 
-                {mapLoading && <p className="muted">Loading prediction...</p>}
+                {mapLoading && <p className="muted">Đang tải dự đoán...</p>}
                 {!mapLoading && mapError && <div className="error-banner">{mapError}</div>}
 
                 {!mapLoading && !mapError && (
@@ -681,15 +693,15 @@ function App() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="muted">No camera image for this location.</div>
+                        <div className="muted">Không có ảnh camera cho vị trí này.</div>
                       )}
                     </div>
                     <div className="prediction-card">
-                      <h4>Predicted speed +15m</h4>
+                      <h4>Tốc độ dự đoán +15 phút</h4>
                       <p className="predicted-speed">
                         {mapDetail?.horizons?.['15m']?.speed?.toFixed?.(1) || '-'} km/h
                       </p>
-                      <small>Updated: {formatTime(mapDetail?.event_time)}</small>
+                      <small>Cập nhật: {formatTime(mapDetail?.event_time)}</small>
                     </div>
                   </div>
                 )}
@@ -703,11 +715,11 @@ function App() {
         <section className="locations-panel">
           <div className="locations-list">
             <div className="locations-list-head">
-              <h3>Chosen Locations</h3>
-              <p className="muted">Tap a location to see camera and +15m prediction.</p>
+              <h3>Danh sách vị trí</h3>
+              <p className="muted">Chọn vị trí để xem camera và dự đoán +15 phút.</p>
             </div>
             {filteredLocations.length === 0 && (
-              <div className="muted">No locations match current filter.</div>
+              <div className="muted">Không có vị trí phù hợp bộ lọc hiện tại.</div>
             )}
             <div className="locations-grid">
               {filteredLocations.map((row) => (
@@ -720,10 +732,10 @@ function App() {
                   <div>
                     <h4>{formatName(row.location_name)}</h4>
                     <p className="muted">
-                      {row.has_camera ? 'Camera available' : 'No camera mapped'}
+                      {row.has_camera ? 'Có camera' : 'Chưa gắn camera'}
                     </p>
                   </div>
-                  <span className="location-chip">View</span>
+                  <span className="location-chip">Xem</span>
                 </button>
               ))}
             </div>
@@ -731,7 +743,7 @@ function App() {
 
           <div className="location-detail-card">
             {!locationTabSelected && (
-              <div className="muted">Select a location to preview camera and prediction.</div>
+              <div className="muted">Chọn vị trí để xem camera và dự đoán.</div>
             )}
 
             {locationTabSelected && (
@@ -739,18 +751,18 @@ function App() {
                 <div className="location-detail-head">
                   <div>
                     <h3>{formatName(locationTabSelected)}</h3>
-                    <p className="muted">Prediction horizon: +15 minutes</p>
+                    <p className="muted">Khung dự đoán: +15 phút</p>
                   </div>
                   <div className="location-meta">
                     {locationCatalog.find((row) => row.location_name === locationTabSelected)?.has_camera ? (
                       <span className="chip">Camera</span>
                     ) : (
-                      <span className="chip feed-missing">No camera</span>
+                      <span className="chip feed-missing">Không có camera</span>
                     )}
                   </div>
                 </div>
 
-                {locationTabLoading && <p className="muted">Loading prediction...</p>}
+                {locationTabLoading && <p className="muted">Đang tải dự đoán...</p>}
                 {!locationTabLoading && locationTabError && (
                   <div className="error-banner">{locationTabError}</div>
                 )}
@@ -765,15 +777,15 @@ function App() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="muted">No camera image for this location.</div>
+                        <div className="muted">Không có ảnh camera cho vị trí này.</div>
                       )}
                     </div>
                     <div className="prediction-card">
-                      <h4>Predicted speed +15m</h4>
+                      <h4>Tốc độ dự đoán +15 phút</h4>
                       <p className="predicted-speed">
                         {locationTabDetail?.horizons?.['15m']?.speed?.toFixed?.(1) || '-'} km/h
                       </p>
-                      <small>Updated: {formatTime(locationTabDetail?.event_time)}</small>
+                      <small>Cập nhật: {formatTime(locationTabDetail?.event_time)}</small>
                     </div>
                   </div>
                 )}
@@ -801,19 +813,19 @@ function App() {
             <div className="detail-header">
               <div>
                 <h3>{formatName(selectedLocation)}</h3>
-                <p className="muted">Model and vehicle detail</p>
+                <p className="muted">Chi tiết mô hình và loại xe</p>
               </div>
-              <button onClick={closeLocationDetail}>Close</button>
+              <button onClick={closeLocationDetail}>Đóng</button>
             </div>
 
-            {loadingDetail && <p className="muted">Loading detail...</p>}
+            {loadingDetail && <p className="muted">Đang tải chi tiết...</p>}
             {!loadingDetail && detailError && <div className="error-banner">{detailError}</div>}
 
             {!loadingDetail && !detailError && (
               <>
                 <section className="detail-chart-card">
-                  <h4>Speed Timeline (Current vs AI Predict)</h4>
-                  <p className="muted">Khung quan sát gần nhất cho location đang chọn.</p>
+                  <h4>Diễn biến tốc độ (Hiện tại vs AI)</h4>
+                  <p className="muted">Khung quan sát gần nhất cho vị trí đang chọn.</p>
                   <div className="chart-wrap">
                     <ResponsiveContainer width="100%" height={280}>
                       <LineChart data={chartSeries} margin={{ top: 12, right: 18, left: 0, bottom: 0 }}>
@@ -835,7 +847,7 @@ function App() {
                         <Line
                           type="monotone"
                           dataKey="current"
-                          name="Toc do Hien tai"
+                          name="Tốc độ hiện tại"
                           stroke="#00c9a7"
                           strokeWidth={2.2}
                           dot={false}
@@ -844,7 +856,7 @@ function App() {
                         <Line
                           type="monotone"
                           dataKey="predicted"
-                          name="AI Predict"
+                          name="AI dự đoán"
                           stroke="#8b5cf6"
                           strokeWidth={2}
                           strokeDasharray="6 4"
@@ -858,50 +870,50 @@ function App() {
 
                 <section className="detail-grid">
                   <article className="detail-card">
-                    <h4>Model</h4>
-                    <p>Version: {horizonData?.model_version || 'N/A'}</p>
-                    <p>Current: {horizonData?.current_speed?.toFixed?.(1) || '-'} km/h</p>
-                    <p>Baseline: {horizonData?.free_flow_speed?.toFixed?.(1) || '-'} km/h</p>
-                    <p>Now label: {horizonData?.predicted_congestion_label || 'N/A'}</p>
+                    <h4>Mô hình</h4>
+                    <p>Phiên bản: {horizonData?.model_version || 'Không có'}</p>
+                    <p>Hiện tại: {horizonData?.current_speed?.toFixed?.(1) || '-'} km/h</p>
+                    <p>Chuẩn: {horizonData?.free_flow_speed?.toFixed?.(1) || '-'} km/h</p>
+                    <p>Nhãn hiện tại: {horizonData?.predicted_congestion_label || 'Không có'}</p>
                   </article>
 
                   <article className="detail-card">
-                    <h4>Prediction Horizons</h4>
-                    <p>+5m: {horizonData?.horizons?.['5m']?.speed?.toFixed?.(1) || '-'} km/h ({horizonData?.horizons?.['5m']?.label || 'N/A'})</p>
-                    <p>+10m: {horizonData?.horizons?.['10m']?.speed?.toFixed?.(1) || '-'} km/h ({horizonData?.horizons?.['10m']?.label || 'N/A'})</p>
-                    <p>+15m: {horizonData?.horizons?.['15m']?.speed?.toFixed?.(1) || '-'} km/h ({horizonData?.horizons?.['15m']?.label || 'N/A'})</p>
+                    <h4>Khung dự đoán</h4>
+                    <p>+5m: {horizonData?.horizons?.['5m']?.speed?.toFixed?.(1) || '-'} km/h ({horizonData?.horizons?.['5m']?.label || 'Không có'})</p>
+                    <p>+10m: {horizonData?.horizons?.['10m']?.speed?.toFixed?.(1) || '-'} km/h ({horizonData?.horizons?.['10m']?.label || 'Không có'})</p>
+                    <p>+15m: {horizonData?.horizons?.['15m']?.speed?.toFixed?.(1) || '-'} km/h ({horizonData?.horizons?.['15m']?.label || 'Không có'})</p>
                   </article>
 
                   <article className="detail-card">
-                    <h4>Vehicle Types (latest)</h4>
+                    <h4>Loại xe (mới nhất)</h4>
                     {locationHistory[0]?.no_camera_feed && (
-                      <p className="warning-text">Camera feed missing near this timestamp.</p>
+                      <p className="warning-text">Mất feed camera gần mốc thời gian này.</p>
                     )}
-                    <p>Xe may: {(locationHistory[0]?.motorcycle_count || 0).toLocaleString('vi-VN')}</p>
-                    <p>O to: {(locationHistory[0]?.car_count || 0).toLocaleString('vi-VN')}</p>
-                    <p>Bus/tai: {(locationHistory[0]?.bus_truck_count || 0).toLocaleString('vi-VN')}</p>
+                    <p>Xe máy: {(locationHistory[0]?.motorcycle_count || 0).toLocaleString('vi-VN')}</p>
+                    <p>Ô tô: {(locationHistory[0]?.car_count || 0).toLocaleString('vi-VN')}</p>
+                    <p>Bus/tải: {(locationHistory[0]?.bus_truck_count || 0).toLocaleString('vi-VN')}</p>
                   </article>
                 </section>
 
                 <section className="detail-table-wrap">
-                  <h4>Recent Timeline</h4>
+                  <h4>Diễn biến gần đây</h4>
                   <table>
                     <thead>
                       <tr>
-                        <th>Time</th>
-                        <th>Current</th>
-                        <th>Pred</th>
-                        <th>Xe may</th>
-                        <th>O to</th>
-                        <th>Bus/tai</th>
+                        <th>Thời gian</th>
+                        <th>Hiện tại</th>
+                        <th>Dự đoán</th>
+                        <th>Xe máy</th>
+                        <th>Ô tô</th>
+                        <th>Bus/tải</th>
                       </tr>
                     </thead>
                     <tbody>
                       {locationHistory.map((item) => (
                         <tr key={`${selectedLocation}-${item.event_time}`}>
                           <td>{formatTime(item.event_time)}</td>
-                          <td>{item.current_speed?.toFixed?.(1) || '-'}</td>
-                          <td>{item.predicted_speed?.toFixed?.(1) || '-'}</td>
+                          <td>{item.current_speed?.toFixed?.(1) || '-'} km/h</td>
+                          <td>{item.predicted_speed?.toFixed?.(1) || '-'} km/h</td>
                           <td>{(item.motorcycle_count || 0).toLocaleString('vi-VN')}</td>
                           <td>{(item.car_count || 0).toLocaleString('vi-VN')}</td>
                           <td>{(item.bus_truck_count || 0).toLocaleString('vi-VN')}</td>
