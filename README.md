@@ -36,22 +36,8 @@ Note: the chat assistant/Groq integration has been removed from this project.
 
 ## Architecture
 
-```text
-Ingestion (async polling) -> Kafka topics -> Spark + AI worker -> PostgreSQL -> FastAPI -> Web UI
+<img width="1061" height="702" alt="old_archi" src="https://github.com/user-attachments/assets/10caedfc-a005-4d83-b7c2-2e349b9df995" />
 
-camera.raw ---------> ai_worker (YOLO) -> camera.processed ----+
-traffic.raw -----------------------------------------------+   |
-weather.raw -------------------------------------------+    |   |
-                                                      Spark joins/writes
-                                                           |
-                                     realtime_traffic_weather + realtime_camera
-                                                           |
-                                                   traffic_view (time-aware join)
-                                                           |
-                                              FastAPI + camera diagnostics API
-                                                           |
-                                                     Vite/React dashboard
-```
 
 ## Key Features
 
